@@ -1,0 +1,112 @@
+This is an introductory file to the strategy
+
+#introduction
+#Yu Gui
+#China Asset Management Co.
+#Quantitative Investment Division
+#7/25/2016
+
+Intro:
+
+Delta-t portfolio strategy is inspired by BoA Merrill Lynch's investment clock theory. According to investment clock theory, the economic phases may affect returns among asset classes (stock, bond, cash...). Investment clock theory specifies four economic phases: reflation, recover, overheat and stagnation. 
+Reflation:  economic growth rate down, inflation rate down;
+Recover:  economic growth rate up, inflation down;
+Overheat:   economic growth rate up, inflation up;
+Stagnation:   economic growth rate down, inflation up;
+
+The investment clock theory derived two consolidated verdict from historical data: 
+1. Economic phases affect returns among different asset classes.
+2. The returns, although affected by economic phases, move in oscillatory fashions and have tendency to converge to their historical means.
+
+For example, according to SYWG(申银万国)'s research: during reflation stage, bond has the best performance; during recover stage and overheat stage, stock has the best performance; during stagnation stage, cash investments have the best performance.
+
+Similarly, S&P500 components (沪深300 for China Market) can be classified into several industries, and the price indices of the industries have their own phases. In a certain economic phase, some of the industries may achieve higher returns then others. 
+
+We assume that the current phase may affect a certain industry's nominal excess return (current return of the industry investment - current return of the overall market). With the change of economic phase, the expectation of excess return of a industry is also changed. Thus, with the change of economic phase, the excess return of a certain industry may go beyond its historical mean (when the economic stage have positive effects on the industry), and may go below its historical mean (when the economic stage have negative effects on the industry). 
+
+------------------------------------------------------------------------------------------
+
+Delta-t portfolio strategy:
+
+------------------------------------------------------------------------------------------
+Definitions: 
+1. Excess Return:
+Excess return: short-term SMA(Industry Index / Market Index) - long-term SMA(Industry Index / Market Index)
+In terms of this document, Excess Return represent the difference between the stochastic fluctuation of the price of a security around its long-tern trend and the fair price according to the long-term trend of the price of the security. 
+In short words, Excess Return is a portion of the price of a security which is "unfair" due to short-term over-valuation and under-valuation of the security. 
+
+2. Cross correlation: 
+"In signal processing, cross-correlation is a measure of similarity of two series as a function of the lag of one relative to the other. This is also known as a sliding dot product or sliding inner-product. It is commonly used for searching a long signal for a shorter, known feature." ------ Wikipedia (Reference: Wikipedia)
+
+3. Delta-t:
+Delta-t is the lag between two time series when the cross correlation of the two time series reaches maximum.
+
+------------------------------------------------------------------------------------------
+
+The assumptions of Delta-t portfolio strategy:
+1. The prices of industry indices are periodically over-valuated and under-valuated due to economical phases. 
+2. The excess return of investment in industries have the tendency to converge to their historical mean. 
+3. The excess returns of investments in industries move in oscillatory fashions.
+4. The ratios of the excess returns of investments in different industries are highly correlated, and such correlations may be achieved with reasonable time delays (delta-t).
+
+------------------------------------------------------------------------------------------
+
+The return of Delta-t portfolio strategy:
+Return of portfolio = Excess Return of industry j (long) - Excess Return of industry i (short).
+(In desirable scenario, the Excess Return of industry j should be higher than zero while the Excess Return of industry i should be lower than zero, so that the return of portfolio should be positive)
+
+------------------------------------------------------------------------------------------
+
+The methodology of Delta-t portfolio strategy:
+1. Data: 
+Close price of industry indices (for example, in the program accompanying this intro, we used SYWG primary industry indices)
+Close price of stock market indices (we used Shanghai & Shenzhen select 300 index)
+
+2. Find excess returns:
+Excess return: short-term SMA(Industry Index / Market Index) - long-term SMA(Industry Index / Market Index)
+
+We used Moving Average Divergence as an indicator of excess return. 
+The index/market ratio filters the systematic risk factor from excess return calculation. 
+The short-term moving average represent the near-term return of the industry, mainly affected by economical phase changes.
+The long-term moving average represent the long-term industry trend mainly affected by the development of economy and the adjustment of economic structure. 
+
+The short-term moving average uses fast moving average period (1 - 14 days) to filter near-term noise, e.g. bulk sell-off at a certain date.
+The long-term moving average uses slow moving average period (180 - 720 days) to filter long-term structural trend, e.g. tech sector and service sector are taking on more profitability yoy, and they are going to continue doing so; thus, the long-term trend of profitability shell not be considered as a result of economic phases effects.
+The difference between the two moving average contains the remaining information (filtered by slowMA filter and fastMA filter): the effect of current economic phase on the industries. 
+
+When short-term market-adjusted moving average goes beyond the long-term market-adjusted moving average, excess return is positive. Positive excess return means that the subject industry is enjoying a higher-than-historical-mean return, and vice versa. Considering the length of time that we are measuring the long and short term MAs, we assume that the excess return calculated by MAD method will complete a cycle within the long term and, within the cycle, the excess return will converge to zero at least for once. 
+For the calculated excess return to make sense, we need to adjust the fast and slow MA period, so that they can filter noises effectively and, more importantly, remain the effects of economic phases. 
+Please refer to the graphs in folder "~/excess_return_MAD_plot/" for visualization of excess returns under different fastMA and slowMA. 
+
+3. Between any two industry indices, find the time-shifted cross-correlation of excess return: 
+The result should be a vector of tuple (lag, correlation)
+'lag' denote the time that is shifted between the two time series before the correlation is calculated.
+'correlation' denote the cross-correlation derived from the time-shifted data series. 
+
+4. Find the maximum cross-correlation between the two industry indices, and the delta-t corresponding to the maximum correlation. 
+The maximum cross-correlation indicate the significance of the linear dependence of one index on another.
+The delta-t indicate the delay between the movement of one index and the movement of another. Delta-t is also the expected time delay in the future movement of the two indices.
+
+5. Construct a correlation matrix consisted of maximum time-shifted cross-correlation of the industry indices. Construct a delta-t matrix consist of delta-t between any two industry indices. The delta-t indicate the expected delay between the movement of one index and the movement of another.
+
+6. Identify patterns from the two matrix from the preceding procedure. Ideally, the movement of industry indices should form several cycles, but considering the weak correlation between some of the indices, we shall focus only on the strong patterns. 
+Something to be noted about strong patterns:
+	1. correlation shall not be too low between two industries
+	2. delta-t shall neither be too short nor too long
+
+	In the program accompanying this document, we used three filters to find trading pairs:
+	1. minimum cross-correlation
+	2. minimum delta-t
+	3. maximum delta-t
+
+	Please refer to "~/comparison_plot/" for visualization of excess return of trading pairs
+
+7. Generate trading strategies with the patterns: 
+According to our cross correlation matrix, our delta-t matrix and the pattern we quantitatively identified, we can forecast the movement of a industry index by looking at its neighbors in the cyclic pattern. Using our forward-looking forecast signal, accompanied by stochastic signals and momentum signals, we buy a index when we confirm strong upward potential in it and we sell a index when we confirm strong downward potential in it. 
+
+------------------------------------------------------------------------------------------
+
+The advantages of Delta-t portfolio strategy: 
+1. By long on some of the stocks (or industry ETFs) and short on another bunch of stocks (or industry ETFs), we can, but do not necessarily need to, avoid all systematic risks (both upward risk and downward risk). 
+2. The patterns used by this strategy are well supported by fundamental facts like GDP and CPI (if we spare our time to analyze them). Thus, the patterns are expected to be reliable. 
+3. This strategy is a mid-term trading strategy. The security positions are expected to be held from 3 months to 9 months. Execution cost of this strategy is expected to be low.
