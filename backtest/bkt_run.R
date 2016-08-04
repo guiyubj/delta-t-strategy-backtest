@@ -12,7 +12,7 @@ equity_long = bkt_acct$curr_equity / 2
 equity_short = bkt_acct$curr_equity / 2
 
 #start testing
-while (bkt_env$curr_date < (length(dt_env$wsd_data$DATETIME) - bkt_env$hold_time)) {
+while ((bkt_env$curr_date + bkt_env$hold_time) < (length(dt_env$wsd_data$DATETIME))) {
   
   #refresh watching matrix to monitor past N day's return
   watch = dt_env$wsd_data[(bkt_env$curr_date - bkt_env$watch_time) : 
@@ -53,7 +53,15 @@ while (bkt_env$curr_date < (length(dt_env$wsd_data$DATETIME) - bkt_env$hold_time
   
   
   #hold the portfolio firmly for a period
-  bkt_env$curr_date = bkt_env$curr_date + bkt_env$hold_time
+  end_date = bkt_env$curr_date + bkt_env$hold_time
+  while (bkt_env$curr_date < end_date) {
+    bkt_env$curr_date = bkt_env$curr_date + 1
+    
+    refreshStock()
+    
+    bkt_acct$hist_equity[bkt_env$curr_date, ] = 
+      c(bkt_env$curr_date, bkt_acct$curr_equity)
+  }
   
   refreshStock()
   
@@ -76,7 +84,7 @@ while (bkt_env$curr_date < (length(dt_env$wsd_data$DATETIME) - bkt_env$hold_time
   bkt_acct$curr_equity = bkt_acct$curr_equity + profit_short
   
   #record
-  bkt_acct$hist_equity[length(bkt_acct$hist_equity) + 1] = 
+  bkt_acct$hist_equity[bkt_env$curr_date, ] = 
     c(bkt_env$curr_date, bkt_acct$curr_equity)
   
   print(bkt_acct$curr_equity)

@@ -9,12 +9,14 @@ bkt_acct = new.env(parent = bkt_env)
 
 #create variables
 bkt_acct$curr_equity = 100000000
+bkt_acct$cash = bkt_acct$curr_equity
 
 #create log
 bkt_acct$log = list()
 
 #create data containers in bkt_acct environment
-bkt_acct$hist_equity = data.frame(row.names = c('Date', 'Equity'))
+bkt_acct$hist_equity = matrix(nrow = length(dt_env$wsd_data[[1]]), ncol = 2)
+colnames(bkt_acct$hist_equity) = c('Date', 'Equity')
 
 bkt_acct$curr_pos = data.frame(row.names = names(dt_env$wsd_data)[2:length(dt_env$wsd_data)])
 for (i in c('Shares', 'PrcPerShr', 'CostPerShr', 
@@ -25,13 +27,20 @@ for (i in c('Shares', 'PrcPerShr', 'CostPerShr',
 
 #function: refresh stock data frame
 refreshStock <- function () {
+  security_worth = 0
   for (ticker in row.names(bkt_acct$curr_pos)) {
     bkt_acct$curr_pos[ticker, 'PrcPerShr'] = dt_env$wsd_data[[ticker]][bkt_env$curr_date]
     bkt_acct$curr_pos[ticker, 'MktVal'] = 
       bkt_acct$curr_pos[ticker, 'PrcPerShr'] * bkt_acct$curr_pos[ticker, 'Shares']
+    security_worth = security_worth + bkt_acct$curr_pos[ticker, 'MktVal']
+    
     bkt_acct$curr_pos[ticker, 'Profit'] = bkt_acct$curr_pos[ticker, 'MktVal'] - 
       sign(c(bkt_acct$curr_pos[ticker, 'Shares'])) * bkt_acct$curr_pos[ticker, 'Cost']
   }
+  
+  #refresh equity
+  bkt_acct$curr_equity = bkt_acct$cash + security_worth
+  
   bkt_acct$log = c(bkt_acct$log, list('refresh'))
 }
 
@@ -51,6 +60,7 @@ buyStock <- function (ticker, share) {
   
   #cash spending (neg)
   cash_income = -bkt_acct$curr_pos[ticker, 'CostPerShr'] * share
+  bkt_acct$cash = bkt_acct$cash + cash_income
   
   #accumulate cost of purchase
   bkt_acct$curr_pos[ticker, 'Cost'] = bkt_acct$curr_pos[ticker, 'Cost'] + 
@@ -72,11 +82,13 @@ sellStock <- function (ticker, share) {
   profit_realized = 0;
   
   bkt_acct$curr_pos[ticker, 'Date'] = bkt_env$curr_date
+  curr_price = dt_env$wsd_data[[ticker]][bkt_env$curr_date]
   bkt_acct$curr_pos[ticker, 'PrcPerShr'] = dt_env$wsd_data[[ticker]][bkt_env$curr_date]
   bkt_acct$curr_pos[ticker, 'Shares'] = bkt_acct$curr_pos[ticker, 'Shares'] - share
   
   #cash income (positive)
   cash_income = bkt_acct$curr_pos[ticker, 'PrcPerShr'] * share
+  bkt_acct$cash = bkt_acct$cash + cash_income
   
   #accumulate cost of purchase
   bkt_acct$curr_pos[ticker, 'Cost'] = bkt_acct$curr_pos[ticker, 'Cost'] -
@@ -87,6 +99,10 @@ sellStock <- function (ticker, share) {
                                bkt_acct$curr_pos[ticker, 'CostPerShr'])
   bkt_acct$curr_pos[ticker, 'Profit'] = 
     bkt_acct$curr_pos[ticker, 'Profit'] - profit_realized
+  
+  bkt_acct$log = c(bkt_acct$log, 
+                   list(paste('sell', ticker, 'shares', 
+                              share, 'income', share * curr_price)))
   
   return(list(cash = cash_income, profit = profit_realized))
 }
@@ -107,12 +123,17 @@ sellShortStock <- function (ticker, share) {
   
   #cash spending (neg)
   cash_income = -bkt_acct$curr_pos[ticker, 'CostPerShr'] * share
+  bkt_acct$cash = bkt_acct$cash + cash_income
   
   #accumulate cost of purchase
   bkt_acct$curr_pos[ticker, 'Cost'] = bkt_acct$curr_pos[ticker, 'Cost'] + 
     share * curr_price
   
   bkt_acct$curr_pos[ticker, 'Profit'] = 0
+  
+  bkt_acct$log = c(bkt_acct$log, 
+                   list(paste('sellShort', ticker, 'shares', 
+                              share, 'cost', share * curr_price)))
   
   return(list(cash = cash_income, profit = profit_realized))
 }
@@ -124,11 +145,13 @@ buyBackStock <- function (ticker, share) {
   profit_realized = 0;
   
   bkt_acct$curr_pos[ticker, 'Date'] = bkt_env$curr_date
+  curr_price = dt_env$wsd_data[[ticker]][bkt_env$curr_date]
   bkt_acct$curr_pos[ticker, 'PrcPerShr'] = dt_env$wsd_data[[ticker]][bkt_env$curr_date]
   bkt_acct$curr_pos[ticker, 'Shares'] = bkt_acct$curr_pos[ticker, 'Shares'] + share
   
   #cash income (positive)
   cash_income = bkt_acct$curr_pos[ticker, 'PrcPerShr'] * -share
+  bkt_acct$cash = bkt_acct$cash + cash_income
   
   #accumulate cost of purchase
   bkt_acct$curr_pos[ticker, 'Cost'] = bkt_acct$curr_pos[ticker, 'Cost'] -
@@ -139,6 +162,10 @@ buyBackStock <- function (ticker, share) {
                                bkt_acct$curr_pos[ticker, 'CostPerShr'])
   bkt_acct$curr_pos[ticker, 'Profit'] = 
     bkt_acct$curr_pos[ticker, 'Profit'] - profit_realized
+  
+  bkt_acct$log = c(bkt_acct$log, 
+                   list(paste('buyBack', ticker, 'shares', 
+                              share, 'income', share * curr_price)))
   
   return(list(cash = cash_income, profit = profit_realized))
 }
