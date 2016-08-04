@@ -239,17 +239,17 @@ get_industry_index_list <- function(str_idx = 'pri') {
 
 #function: get data from Wind Terminal
 #library WindR must be loaded and w.isconnected() must return True for this function to work properly
-get_data <- function(idx = 'scd') {
+get_data <- function(idx = 'scd', begin_date = "ED-10Y", end_date = "2016-07-20") {
   if(idx == 'sh') {
-    w_wsd_data<-w.wsd("000001.SH","close","ED-10Y","2016-07-20","Fill=Previous")
+    w_wsd_data<-w.wsd("000001.SH","close",begin_date,end_date,"Fill=Previous")
   }
   else if(idx == 'hs300') {
-    w_wsd_data<-w.wsd("000300.SH","close","ED-10Y","2016-07-20","Fill=Previous")
+    w_wsd_data<-w.wsd("000300.SH","close",begin_date,end_date,"Fill=Previous")
   }
   else {
     vec_idx_code = get_industry_index_list(idx)
     w_wsd_data<-w.wsd(paste(vec_idx_code, sep = ','),
-                      "close","ED-10Y","2016-07-20","Fill=Previous")
+                      "close",begin_date,end_date,"Fill=Previous")
   }
   return(w_wsd_data)
 }
